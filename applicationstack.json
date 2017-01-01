@@ -1,0 +1,171 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Hello World! example",
+	"Parameters": {
+		"VPC": {
+			"Default": "vpc-22d27c45",
+			"Description": "The default VPC",
+			"Type": "AWS::EC2::VPC::Id"
+		},
+		"Subnet": {
+			"Default": "subnet-f68c6dbf",
+			"Description": "A public subnet from default VPC.",
+			"Type": "AWS::EC2::Subnet::Id"
+		}
+	},
+	"Mappings": {
+		"RegionMap": {
+			"eu-west-1": {"AMI": "ami-bff32ccc"},
+			"ap-southeast-1": {"AMI": "ami-c9b572aa"},
+			"ap-southeast-2": {"AMI": "ami-48d38c2b"},
+			"eu-central-1": {"AMI": "ami-bc5b48d0"},
+			"ap-northeast-2": {"AMI": "ami-249b554a"},
+			"ap-northeast-1": {"AMI": "ami-383c1956"},
+			"us-east-1": {"AMI": "ami-60b6c60a"},
+			"sa-east-1": {"AMI": "ami-6817af04"},
+			"us-west-1": {"AMI": "ami-d5ea86b5"},
+			"us-west-2": {"AMI": "ami-1b3b462b"}
+		}
+	},
+	"Resources": {
+		"EC2Instance1": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Fn::FindInMap": ["RegionMap", {"Ref": "AWS::Region"}, "AMI"]},
+				"InstanceType": "t1.micro",
+				"NetworkInterfaces": [{
+					"AssociatePublicIpAddress": "true",
+					"DeviceIndex": "0",
+					"GroupSet": [{"Ref": "WebserverSecurityGroup"}],
+					"SubnetId": {"Ref": "Subnet"}
+				}],
+				"Tags": [{
+					"Key": "Name",
+					"Value": "hello-world"
+				}],
+				"UserData": {"Fn::Base64": {"Fn::Join": ["", [
+					"#!/bin/bash -ex\n",
+					"yum install -y httpd\n",
+					"cd /var/www/html\n",
+					"echo '<html><body>Hello World!</body></html>' > index.html\n",
+					"service httpd start\n"
+				]]}}
+			}
+		},
+		"EC2Instance2": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Fn::FindInMap": ["RegionMap", {"Ref": "AWS::Region"}, "AMI"]},
+				"InstanceType": "t1.micro",
+				"NetworkInterfaces": [{
+					"AssociatePublicIpAddress": "true",
+					"DeviceIndex": "0",
+					"GroupSet": [{"Ref": "WebserverSecurityGroup"}],
+					"SubnetId": {"Ref": "Subnet"}
+				}],
+				"Tags": [{
+					"Key": "Name",
+					"Value": "hello-world"
+				}],
+				"UserData": {"Fn::Base64": {"Fn::Join": ["", [
+					"#!/bin/bash -ex\n",
+					"yum install -y httpd\n",
+					"cd /var/www/html\n",
+					"echo '<html><body>Hello World!</body></html>' > index.html\n",
+					"service httpd start\n"
+				]]}}
+			}
+		},
+		"EC2Instance3": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Fn::FindInMap": ["RegionMap", {"Ref": "AWS::Region"}, "AMI"]},
+				"InstanceType": "t1.micro",
+				"NetworkInterfaces": [{
+					"AssociatePublicIpAddress": "true",
+					"DeviceIndex": "0",
+					"GroupSet": [{"Ref": "WebserverSecurityGroup"}],
+					"SubnetId": {"Ref": "Subnet"}
+				}],
+				"Tags": [{
+					"Key": "Name",
+					"Value": "hello-world"
+				}],
+				"UserData": {"Fn::Base64": {"Fn::Join": ["", [
+					"#!/bin/bash -ex\n",
+					"yum install -y httpd\n",
+					"cd /var/www/html\n",
+					"echo '<html><body>Hello World!</body></html>' > index.html\n",				
+					"service httpd start\n"
+				]]}}
+			}
+		},
+      "BabystepsLoadBalancer" : {
+         "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+         "Properties" : {
+            "HealthCheck" : {
+               "Interval" : "30",
+               "Target" : "HTTP:80/index.html",
+               "Timeout" : "5",
+               "UnhealthyThreshold" : "5",
+               "HealthyThreshold" : "3"
+            },
+            "Subnets" : [
+               {
+                  "Ref" : "Subnet"
+               }
+            ],
+            "Instances" : [
+               {
+                  "Ref" : "EC2Instance1"
+               },
+               {
+                  "Ref" : "EC2Instance2"
+               },			   
+               {
+                  "Ref" : "EC2Instance3"
+               }
+            ],
+            "Listeners" : [
+               {
+                  "InstancePort" : "80",
+                  "Protocol" : "HTTP",
+                  "LoadBalancerPort" : "80"
+               }
+            ],
+            "SecurityGroups" : [
+               {
+                  "Ref" : "WebserverSecurityGroup"
+               }
+            ]
+         }
+      },						
+		"WebserverSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "hello-world-webserver",
+				"VpcId": {"Ref": "VPC"},
+				"SecurityGroupIngress": [{
+					"CidrIp": "0.0.0.0/0",
+					"FromPort": 80,
+					"IpProtocol": "tcp",
+					"ToPort": 80
+				}]
+			}
+		}
+	},
+	"Outputs": {
+		"HelloWorldURL1": {
+			"Description": "The URL pointing to Hello World!.",
+			"Value": {"Fn::Join": ["", ["http://", {"Fn::GetAtt": ["EC2Instance1", "PublicIp"]}]]}
+		},
+		"HelloWorldURL2": {
+			"Description": "The URL pointing to Hello World!.",
+			"Value": {"Fn::Join": ["", ["http://", {"Fn::GetAtt": ["EC2Instance2", "PublicIp"]}]]}
+		},
+		"HelloWorldURL3": {
+			"Description": "The URL pointing to Hello World!.",
+			"Value": {"Fn::Join": ["", ["http://", {"Fn::GetAtt": ["EC2Instance3", "PublicIp"]}]]}
+		}				
+	}
+}
